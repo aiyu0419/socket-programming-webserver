@@ -33,7 +33,7 @@ int main(int argc, char **argv)
     char *hostIP;
 
   //create a socket for TCP connection as client
-  int sock; // socket descriptor
+     int sock; // socket descriptor
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         die("socket failed");
 
@@ -44,14 +44,13 @@ int main(int argc, char **argv)
       hostIP = inet_ntoa(*(struct in_addr *)he->h_addr);
 
  //construct a server address for mdb-lookup-host
- struct sockaddr_in hostaddr;
+    struct sockaddr_in hostaddr;
     memset(&hostaddr, 0, sizeof(hostaddr)); // must zero out the structure
     hostaddr.sin_family      = AF_INET;
     hostaddr.sin_addr.s_addr = inet_addr(hostIP);
     hostaddr.sin_port        = htons(mdb_lookup_port); // must be in network byte order
   
     // Establish a TCP connection to the server
-
     if (connect(sock, (struct sockaddr *) &hostaddr, sizeof(hostaddr)) < 0)
         die("connect failed");
    
@@ -90,33 +89,39 @@ int main(int argc, char **argv)
     while (1) {
 
         // Accept an incoming connection
-
         clntlen = sizeof(clntaddr); // initialize the in-out parameter
 
-        if ((clntsock = accept(servsock,
-                        (struct sockaddr *) &clntaddr, &clntlen)) < 0)
-        {fprintf(stderr,"accept failed\n");continue;}
-
+    if ((clntsock = accept(servsock,(struct sockaddr *) &clntaddr, &clntlen)) < 0){
+	fprintf(stderr,"accept failed\n");continue;
+     }
        char *client_ip=inet_ntoa(clntaddr.sin_addr);
         FILE *fd;
-        if((fd=fdopen(clntsock,"r"))==NULL){
-            fprintf(stderr,"fdopen falied\n");close(clntsock); continue;
+    if((fd=fdopen(clntsock,"r"))==NULL){
+        fprintf(stderr,"fdopen falied\n");close(clntsock); continue;
         }
 
     char *buf=(char *)malloc(500);
-    if(!buf){fprintf(stderr,"malloc return NULL\n");fclose(fd);continue;}
+    if(!buf){
+	    fprintf(stderr,"malloc return NULL\n");fclose(fd);continue;
+        }
      char *status400="400 Bad Request";
        //read the first line
        //if browser crash during typing sending request,close connection
-       if (fgets(buf,500,fd)==NULL){
-               if (ferror(fd)){free(buf);fprintf(stderr,"IO error\n");fclose(fd);continue;}
-               else {fprintf(stderr,"%s \" \" %s\n",client_ip,status400);
-                  fclose(fd);
-                  free(buf);
-                  continue;}}
-
+    if (fgets(buf, 500, fd) == NULL) {
+    if (ferror(fd)) {
+        free(buf);
+        fprintf(stderr, "IO error\n");
+        fclose(fd);
+        continue;
+    } else {
+        fprintf(stderr, "%s \" \" %s\n", client_ip, status400);
+        fclose(fd);
+        free(buf);
+        continue;
+    }
+}
       //parse the request line 
-       char *token_separators = "\t \r\n"; // tab, space, new line
+        char *token_separators = "\t \r\n"; // tab, space, new line
 	char *method = strtok(buf, token_separators);
 	char *requestURI = strtok(NULL, token_separators);
 	char *httpVersion = strtok(NULL, token_separators);
@@ -130,30 +135,35 @@ int main(int argc, char **argv)
            snprintf(response,sizeof(response),"%s%s\r\n""\r\n""<html><body>\r\n<h1>%s</h1>\r\n</body></html>\r\n",version,status400,status400);
            fprintf(stderr,"%s \"%s %s %s\" %s\n",client_ip,method,requestURI,httpVersion,status400);
        if(send(clntsock,response,strlen(response),0)!=strlen(response)){
-           free(buf); fprintf(stderr,"send failed\n");fclose(fd);continue;}
+           free(buf); fprintf(stderr,"send failed\n");fclose(fd);continue;
+       }
        free(buf);
        fclose(fd);
-           continue;} 
+        continue;
+       } 
 
       //check method, free buf
    if(strcmp("GET",method)!=0){
        snprintf(response,sizeof(response),"%s%s\r\n""\r\n""<html><body>\r\n<h1>%s</h1>\r\n</body></html>\r\n",version,status501,status501);
         fprintf(stderr,"%s \"%s %s %s\" %s\n",client_ip,method,requestURI,httpVersion,status501);
       if(send(clntsock,response,strlen(response),0)!=strlen(response)){
-          free(buf); fprintf(stderr,"send failed\n");fclose(fd);continue;}
+          free(buf); fprintf(stderr,"send failed\n");fclose(fd);continue;
+      }
       free(buf);
       fclose(fd);
-          continue; }
+      continue; }
 
    //check version, free buf
    if(strcmp("HTTP/1.0",httpVersion)!=0&&strcmp("HTTP/1.1",httpVersion)!=0){
     snprintf(response,sizeof(response),"%s%s\r\n""\r\n""<html><body>\r\n<h1>%s</h1>\r\n</body></html>\r\n",version,status501,status501);
     fprintf(stderr,"%s \"%s %s %s\" %s\n",client_ip,method,requestURI,httpVersion,status501);
-        if(send(clntsock,response,strlen(response),0)!=strlen(response)){
-            free(buf);fprintf(stderr,"send failed\n");fclose(fd);continue;}
-        free(buf);
-        fclose(fd);
-            continue; }
+  if(send(clntsock,response,strlen(response),0)!=strlen(response)){
+    free(buf);fprintf(stderr,"send failed\n");fclose(fd);continue;
+  }
+    free(buf);
+    fclose(fd);
+    continue; 
+   }
 
    //check request URI,free buf
    int len=strlen(requestURI);
@@ -161,12 +171,12 @@ int main(int argc, char **argv)
        snprintf(response,sizeof(response),"%s%s\r\n""\r\n""<html><body>\r\n<h1>%s</h1>\r\n</body></html>\r\n",version,status400,status400);
        fprintf(stderr,"%s \"%s %s %s\" %s\n",client_ip,method,requestURI,httpVersion,status400);
        if(send(clntsock,response,strlen(response),0)!=strlen(response)){
-          free(buf); fprintf(stderr,"send failed\n");fclose(fd);continue;}
+          free(buf); fprintf(stderr,"send failed\n");fclose(fd);continue;
+       }
        free(buf);
        fclose(fd);
-       continue; }
-
-
+       continue; 
+       }
     // Now, skip the header lines and check client if crashes before new line after status line
     char headers[BUF_SIZE]; char *t;
     while((t=fgets(headers,sizeof(headers),fd))!=NULL){
@@ -209,11 +219,12 @@ int main(int argc, char **argv)
         
       //send the form
        if(send(clntsock,form,len_form,0)!=len_form){
-           free(buf); fprintf(stderr,"send failed\n");fclose(fd);continue;}
-        
-       free(buf);fclose(fd);continue;}
-
-
+           free(buf); fprintf(stderr,"send failed\n");fclose(fd);continue;
+       }
+         free(buf);
+	 fclose(fd);
+	 continue;
+    }
 
     //situation 2:"mdb-lookup?key="
 
@@ -230,9 +241,11 @@ int main(int argc, char **argv)
                   fprintf(stderr,"mdb-lookup-server connection failed:Brokenpipe\n");
                   snprintf(response,sizeof(response),"%s%s\r\n""\r\n""<html><body>\r\n<h1>%s</h1>\r\n</body></html>\r\n",version,status500,status500);
           if(send(clntsock,response,strlen(response),0)!=strlen(response)){
-             free(buf); fprintf(stderr,"send failed\n");fclose(fd);continue;}
+             free(buf); fprintf(stderr,"send failed\n");fclose(fd);continue;
+	  }
           fprintf(stderr,"%s \"%s %s %s\" %s\n",client_ip,method,requestURI,httpVersion,status500);
-         free(buf);fclose(fd); continue;  }
+         free(buf);fclose(fd); continue; 
+      }
 
        const char *form =
            "<html><body>\n"
@@ -249,10 +262,12 @@ int main(int argc, char **argv)
        //status line sending
    snprintf(response,sizeof(response),"%s 200 OK\r\n""\r\n",version);
  if(send(clntsock,response,strlen(response),0)!=strlen(response)){
-            free(buf); fprintf(stderr,"send failed\n");fclose(fd);continue;}
+            free(buf); fprintf(stderr,"send failed\n");fclose(fd);continue;
+ }
                //send the form
-       if(send(clntsock,form,len_form,0)!=len_form){
-          free(buf); fprintf(stderr,"send failed\n");fclose(fd);continue;}
+if(send(clntsock,form,len_form,0)!=len_form){
+          free(buf); fprintf(stderr,"send failed\n");fclose(fd);continue;
+ }
    
        //checked the key
          char key[1000];
@@ -389,18 +404,22 @@ if(send(clntsock,response,strlen(response),0)!=strlen(response)){
  while((n=fread(read,1,sizeof(read),fp))>0){
       if(send(clntsock,read,n,0)!=n){
           free(buf);
-          fprintf(stderr,"send failed\n");fclose(fp);fclose(fd);continue;}}
+          fprintf(stderr,"send failed\n");fclose(fp);fclose(fd);continue;
+      }
+ }
       if(ferror(fp)){
-              free(buf);
-              fprintf(stderr,"send failed\n");fclose(fp);fclose(fd);continue;}
-
+           free(buf);
+           fprintf(stderr,"send failed\n");fclose(fp);fclose(fd);continue;
+      }
       //after reading successfully, close fp here, free(buf) and close fd will do at the end of while loop
-                  fclose(fp); }
- 
+           fclose(fp); 
     }
+}
 //after reading files(from directory OR file path)  successfully, clean up
-free(buf);fclose(fd); }
+          free(buf);fclose(fd); 
     }
+    
+}
 
     
        
